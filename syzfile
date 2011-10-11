@@ -1,0 +1,7 @@
+#%Module
+
+description {
+	soft-prereq syz
+	soft-prereq buildiful
+}
+

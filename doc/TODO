@@ -1,0 +1,434 @@
+
+- syzix 0.1:
+  - first public release
+  - usable for simple, standalone command line utilities
+  - not self-hosting
+    - requires working host system, eg. slackware, centos, ...
+  - slow
+  - working modext
+  - working essentials (relying on cannot-unload, not working prereq)
+
+
+NOW/SOON:
+
+DONE - use "syz" instead of "module"
+
+- $SYZPATH not $MODULEPATH
+  - similarly $LOADEDSYZ not $LOADEDMODULES
+  - and $_SFFILES_ not $_LMFILES_
+  - maybe this can be done in the syzcmd wrapper
+    - first set MODULEPATH="$SYZPATH", etc
+    - then run modulecmd
+    - then munge the output to change s/\<MODULEPATH\>/\<SYZPATH\>/g, etc
+
+
+- the format for $basedir is
+    $repo/$arch/$pkgname/$version
+- the format for $repo is
+    [/$prefix]/sw[/host/$HOSTNAME]/$r[/hostdep]
+- the format for $prefix is "non-empty free"
+  - system-wide software will omit the optional /$prefix section
+  - user's personal repos will typically have $prefix="$HOME"
+- the format for $r is "non-empty free"
+  - "syzix/*" is reserved for the syzix project
+  - "myrepo" is reserved for user's personal repos
+  - "host/*" is not allowed (to prevent ambiguity)
+- the format for $arch is "non-empty single-level free", ie. [^/]+
+  - "src" is reserved for source (buildiful) material
+  - "noarch" is reserved for non-architecture specific stuff
+  - "hostdep", "pkgs", ".sf" are not allowed (to prevent ambiguity)
+  - will typically take the form "<machine>-<kernel>", eg. "x86_64-linux", "i386-freebsd"
+    - canonically "$(uname -m)-$(uname -s)", except with the output of "$(uname -s)" lowercased.
+
+- the format for $sfdir is
+    $repo/.sf/$arch/$pkgname
+
+- the format for $sffile is
+    $sffile/$version
+
+- the format for $bfdir is
+    $repo/src/$pkgname
+
+
+
+- rename the "essentials" package to "syzix-essentials"
+  - has special version named "default" (which is the default)
+    - not a symlink to any other version
+    - uses soft-prereqs in its syzfile, compared to the normal mumbered versions which have force-prereqs to the correct versions
+
+- the syzix-essentials-setup is generated from the bf file
+  - numbered versions will "syz load" the specifically numbered syzix-essentials/$version syzfile
+  - the special "default" version will just "syz load" the default syzix-essentials syzfile
+
+DONE - an empty (non-existant) $build is the same as a build of "-1"
+DONE   - so get rid of the -1 suffixes everwhere, they're horrid and confusing
+DONE   - bf will need checking to make sure it complies with this idea throughout
+
+- add a syz package
+  - the initial version will just load modules and modext (default versions)
+    - and provide the thin "syzcmd" wrapper around "modulecmd"
+  - later versioms can implement "syzcmd" natively in bash
+    - and then natively implement the "syz" function natively in bash
+  - would be good if the "syzcmd" that's mentioned in syzix-essentials-setup didn't have to be there...
+
+- the syzix package is like syzix-essentials with its versioning (default vs numbered)
+  - it will need a list of pkg/versions which define that version of syzix
+    - could be from the output of "syz -t list" or similar, once a good environment is obtained
+  - the list may as well be in syzfile format, as force-prereqs
+  - the syzix package will therefore need an actual "package source archive" (consisting of just the list), which is unlike syzix-essentials which only needs a bf file
+
+
+- shetup should be in its own package
+  - /shetup is a symlink into /syzix/noarch/shetup/default/bin/shetup
+  - this is where lordoftheshells lives
+    - bifurcates into shetup.sh and shetup.csh
+    - which in turn call into syzix-essentials-setup
+      - hmmm, more hardcoded symlinks... ugh yuk
+  - maybe call it syzup instead...
+  - actually, maybe syzix-essentials should be this package
+    - ie. rename syzix-essentials to shetup or syzup or syzziup or syzzyup
+  - and as it turns out, the syzzyup script belongs alongside syz itself
+    - since it's full of low-level details about how syz is implemented
+    - so the syzzyup package should be merged into the syz package
+    - much simpler and easier
+
+
+- each repo needs a ChangeLog.txt file
+
+
+- when a user wants to customise a package (eg. configure it, or adjust a script)
+  - DO NOT just edit the straight package in $repo
+    - eg. /sw/syzix/base/noarch/pkgname/version
+  - instead, clone the installation into /sw/host/$HOSTNAME/$repo...
+    - eg. /sw/host/bebique/syzix/base/noarch/pkgname/version
+  - similarly $HOME/sw/arch/pkgname/version goes to $HOME/sw/host/$HOSTNAME/arch/pkgname/version
+    - this isn't trite - even though users can just edit what's inside $HOME/sw,
+      if they did that then they would have the same problem as root users when trying to
+      upgrade, which is an inability to diff the custom package against the original
+  - eventually this will lead to being able to easily do 3-way diff merges of configs into
+    new versions
+  - cloning may later involve creating hard or sym links to the originals
+    - would require something like flcow to be best effective
+    - perhaps the ordinary access to /sw/* could be via readonly bind mounts to somewhere else where they're really stored
+      - then a script must (well, should) be used to get access to the rw bit, with flcow loaded
+      - per-process namespaces could maybe be used to enforce the above
+      - not sure how this might impact on the ro/rw separation of package internals that's planned for later on...
+
+
+- fast searching can use an slocate backend
+  - respects permissions
+  - necessitates a daemon(s)
+    - since slocate is setuid root, and the db only readable to root - otherwise users can subvert file permission protections
+    - hardest part about having a user-queried daemon is, how does the daemon know *for* *sure* who the user is at the other of the pipe/socket/whatever?
+      - can do a little dance where the daemon uses inotify() on a well-known mode 01777 directory
+      - watches for users to create pipes/fifos in there
+      - user proves ownership and control by creating them mode 0000
+      - user knows that the daemon is connected and listening when the daemon has chmodded the fifos to 0600
+
+
+- when a repo=foo has been specified to bf, use that to preferentially choose a bf file
+  from that repo, over any others that may be found in other repos
+  - ie. suppose there is a Buildifile present for the 'module' package in both the syzix and syzix-host repos
+    - "bf build modules" will build the syzix one
+    - "bf build modules repo=syzix-host" will build the syzix-host one, even though the one in the syzix repo still appears earlier in $BF_PATH 
+
+
+- buildifiles need a way of specifying build-time and run-time dependencies/requirements
+  - bf can then use "syz ensure" on each item in the list
+  - any that fail to be ensured (ie. "syz ensure" fails), then call "bf build" on them
+    - any that fail that step, cause the whole build to fail
+    - no, failure then means try to build again, but in the $repo-host repo instead - maybe it will work?
+  - the run-time deps get auto-added to the syzfile as soft-prereqs
+
+
+- need a way of "continuing" a build that has failed
+  - especially important for large builds, will get annoying to have to restart from the top just because of silly little errors
+  - "bf build -c foo" will "continue" building the latest build of foo
+    - ie. detect_build will be the highest numbered build that's already present (or empty for "-1")
+    - requires changing unpack so that it only unpacks if the source_dir isn't present (like fetch will only fetch when necessary)
+    - if a src dir is present, then that's fine, no --force needed
+    - -c and -f are mutually exclusive
+    - can still do "bf build -f foo build=..." to force a from-scratch rebuild of a particular build
+    - need to somehow inhibit the ./configure step if continuing
+      - easy - only do it if the Makefile is missing or empty (or src/Makefile, if the source_dir has a src subdir)
+      - more refined is: if there is a Makefile.in in the top-level source_dir, then run configure if there is no Makefile (or it's empty).  otherwise, if there is a src/Makefile.in and no src/Makefile (or empty), then do it.  etc.
+
+
+- the "/sw" path element needs to be reintroduced...
+  - "$ROOT/$prefix/${SW_BASE:-sw}/$repo/..."
+  - avoids cluttering /, $HOME, package basedirs, and so on with lots of repo dirs
+  - everything else remains the same - bf, .sf, et al
+
+- $prefix is misguided
+  - the repo must be the full path to the place under which appears arch/pkgname/version
+  - the software residing therein has been built for that path, and so is only guaranteed to work when it's installed in that location, after all.
+  - this means that base syzix repo should be "/sw/syzix"
+  - repos needn't start with a leading slash, however, the leading slash is implied
+  - the $repo-host notation is still valid in all cases
+  - user's personal repo or "myrepo", is $HOME/sw
+    - which is much better
+    - or the user can use whatever they want, eg. $HOME/sw/syzix, $HOME/sw/myrepo, etc etc
+    - it does not make sense to publish personal repos
+      - since they are built for username-specific paths, eg. /home/kev/sw, or /home/900/kjp900/sw
+    - only /sw/... repos should be published
+      - at least until truly relocatable software becomes much more commonplace
+
+
+- in the base dir of a repo, there can be a .reporc file (or .syzixrc, or something)
+  - contains the online home of the repo
+  - and other maintainer info, eg. email, name
+
+
+- omg omg omg
+  - having /syzix/bf alongside /syzix/$arch precludes having an arch called "bf"
+  - this isn't really a problem, but is a little clunky/inelegant
+  - so, rename the /syzix/bf dir to /syzix/src - ie., a "source arch"
+  - this is fantastically great
+  - "the path of least surprise"
+  - in line with other existing packages, etc.
+  - $BF_PATH can remain as $BF_PATH/$BFPATH
+
+
+- if the user has specified a version=foo to bf
+  - then bf can first check for a .../$pkgname/$version/Buildifile file, and use that if found
+  - if not found, then revert to .../$pkgname/Buildifile as usual
+  - if version=foo not specified, then .../$pkgname/Buildifile as usual
+
+
+- keep a copy of the Buildifile (and other stuff from the $bfdir) inside $basedir/src
+  - like copying the SlackBuild into /usr/doc/pkg-vers on slackware
+  - helps to deal with the versioning of Buildifiles
+
+
+- tee the build output into a logfile which gets kept in $basedir/bf.log
+
+
+- see what other features from slacka can make it into bf
+
+
+- $repo should almost never be hardcoded into a Buildifile
+  - users should be able to do the following:
+      mkdir -p ~/sw/bf
+      cp -a /sw/syzix/bf/somepackage $_
+      cd ~/sw/bf
+      vim Buildifile
+      syz load myrepo
+      bf build somepackage
+    and have the new, customised version built inside ~/sw/$arch/somepackage/$version,
+    which the user is then free to "syz load" as usual.
+
+
+
+- on a completely unrelated note to anything:
+  - showing colours in diff on a sub-line basis
+    - take each pair of -+ lines
+    - put the - line into a file, one character per line
+    - same for the + line
+    - now run diff on those two files
+    - now collate everything back:
+      - "-" lines indicate red characters in the original line
+      - "+" lines indicate green characters in the original line
+    - multiple - lines followed by multiple + lines might be trickier... maybe
+      - maybe just string out the entire "-" section into a file, one character per line, and same for the "+" section. how to do/show newlines (both in the one-thing-per-line file, and in the resulting output)??
+
+
+- the syzix-host repo should be listed in the default $MODULEPATH and $BF_PATH
+  after the syzix repo
+
+
+- force-prereq should use module swap, not module unload followed by module load
+  - this is to be compatible with modules that are marked "cannot-unload"
+  - and to keep other prereq chains satisfied, etc
+
+
+- packagify bf
+  - the package should be called "buildiful", not "bf"
+  - like "mercurial" vs "hg"
+  - longer package names reduce the change of collisions (despite $PATH collisions - package naming collisions are much worse than $PATH collisions)
+    - "bf" can be a symlink to the actual "buildiful" script
+
+- the buildiful "build" files should be called "Buildifile" or "Buildfile"
+
+- bf should copy the Buildifile that was used into the resulting installed tree (and/or package tgz)
+
+DONE - ln -s sw/syzix/noarch/essentials/default/bin/essentials-setup /shetup
+
+- switch /{sw,mf,bf}/repo/arch/pkg/version to /repo/{arch,bf}/{,.sf}/pkg/version
+  - allows for a personal "repo" of $HOME/sw, among other interesting possibilities
+    - this is what "syz load use.own" should be changed to use
+
+- shbang package
+  - /shbang
+  - hmmm
+    - intended use is like #!/bin/bash et al, only without the hardcoded paths
+    - instead, an optional list of modules that must be loaded (soft-prereqs), then an unqualified exe name to run (from $PATH)
+    - eg: #!/shbang bash
+          #!/shbang { python/2.6 } python
+    - (assuming that #! passes things like {} as-is, which is a bet that is at least reasonable)
+
+- shwrapnel package
+  - noarch (just scripts)
+  - contains bin/shwrapnel (not +x), which is sourced by wrapper scripts (ie. contains the function definitions, etc)
+  - contains bin/shwrap, which is used by shwrapper
+
+- shwrapper package
+  - separate from shwrapnel
+  - binary (ie. arch dependent)
+  - contains bin/shwrapper (from shwrapper.c)
+    - will search for shwrap, and when found, exec it
+    - search $PATH, then /sw/syzix/noarch/shwrapnel/default/bin, then /usr/bin:/bin
+  - ln -s sw/syzix/native/shwrapper/default/bin/shwrapper /shwrapper
+  - now shwrapper scripts can simply start with
+    #!/shwrapper -ensure module,module,... bash
+    #!/shwrapper -ensure python/2.(((6+++))) python
+
+- syzcmd instead of modulecmd
+  - the Modules package can have a symlink, ln -s modulecmd syzcmd
+
+- syzcmd wrapper
+  - "syz cd foobar/version" will do a cd into the $basedir for foobar/version
+  - "syz basedir foobar/version" will output the basedir
+    - "syz cd ..." then reduces to 'cd "$(syz basedir "$2")"'
+
+- the modulefile/syzfile links back from /mf into /sw should be relative, not absolute
+  - ie. ../../../../sw/syzix/.....
+  - this allows relocatable packages to be relocated trivially by just using cp -a on
+    their /sw and /mf dirs.
+
+- a "syzix-host" repo for packages that are dependent on the host system, eg. anything
+  compiled with the host's toolchain, Modules that relies on the host's tcl, etc.
+
+- initial syzix version should be 0.1, not 1.0
+  - likewise essentials, modext (though in modext's case it's basically a coincidence)
+
+- an arch called "native", which is a symlink to what the user considers to be the native
+  architecture of the machine, ie. usually whatever's reported by $(uname -r).
+  - having this like this in the filesystem might cause problems later when multiple machines
+    of different arch all nfs mount the same /sw
+    - i wonder if symlinks can be bind-mounted....
+      - apparently not, oh well
+  - better is to have $NATIVE_ARCH exported to all processes by init
+    - just as easy to use (nearly), user can override if they're feeling crazy
+
+- finish converting modulefile files to be named "syzfile"
+  - update symlinks in /mf accordingly
+
+- write script to generate/update all of /mf based on /sw
+
+- change /mf to /sy (or /sf or something)
+  - it's now ".sf"
+  - the dot is because its existence is a technicality, it shouldn't be needed eventually
+
+
+
+
+LATER:
+
+- abstraction: syzix-dir
+  - for "syzix-dir $repo", calls "bf-dir $repo/bf" and "sf-dir $repo/*/.sf" for each .sf found
+  - accepts plural arg "-arch bar" to limit the sf-dir calls to just the listed archs instead of all of them
+
+- abstraction: bf-dir
+  - prepend-path BF_PATH
+
+- abstraction: sf-dir
+  - alias for modulefile-dir
+
+- in modext, create global vars for environment variables (at least the commonly used ones)
+  - ie. so that tcl syzfiles can use $HOME like bash would be able to.
+  - similarly for $repo, $arch, $native_arch (from uname -m)
+
+- "prereq foo" stops later "module unload foo" (but allows module swap)
+
+- prereqs should not specify package/version, rather, they should specify
+  package/requirement (or some other syntax), where a "requirement" is not the
+  same as a "version", although a plain "version" is a valid requirement that
+  specifies just that version alone (exactly).
+  - ala tcl's "package require ..." stuff, only more flexible
+  - tcl lives in its own little world, so its silliness with major/minor numbers,
+    "a" and "b" suffixes, etc aren't good enough for the general versioning used
+    in the wider software ecosystem.
+
+- ability for modulefiles to specify "provides", which is what the module provides
+  access to (when that differs from the package name)
+  - eg. openssh "provides" ssh, but so does dropbear
+  - ability for a package to "provide" multiple things
+
+- use lordoftheshells for essential-setup
+
+- remove assumption that / is rw
+  - allow certain per-package subdirs (eg. etc, var) to live on other filesystems
+  - eg. /sw/syzix/arch/package/version/etc -> /mnt/rw/sw/syzix/arch/package/version/etc
+
+- modpack to improve speed
+
+- remove self-conflict by default
+
+- full compiler toolchain
+
+- /init - will be tricky to bootstrap...  maybe...
+
+- native installer
+
+- legacy packages for /bin, /usr/bin, and so on
+  - just have loads of symlinks back to native/default versions
+  - no, better is (probably) to have trivial wrappers that will load the appropriate module (default version), and then re-exec
+
+- port modules+modext to native bash
+  - syntax for bash/tcl specific code inside modulefiles is (***maybe***):
+    description {
+        tcl {
+            ...
+        }
+        bash {
+            ...
+        }
+    }
+  - the problem with this is the differing syntaxes
+    - stuff inside tcl { ... } might not parse in bash
+    - and vice-versa
+  - so better would be something like legacy-script, only for modulefiles themselves
+    - eg. include-specific tcl syzfile-tcl-stuff.tcl
+          include-specific bash syzfile-tcl-stuff.bash
+    - except think of a better name than the lame "include-specific"
+
+- hack programs that search paths to use caches, ala ld.so.cache
+  - ultimate in file resolution speed
+    - more flexible than modpack'd symlinks
+    - but harder - requires hacking potentially lots of programs
+  - glibc's ld.so is a prime candidate
+    - the contents of ld.so.cache corresponding to $LD_LIBRARY_PATH are stored in the environment
+    - lib-dir updates it when it updates $LD_LIBRARY_PATH
+    - will probably require some hacking of the format to allow easy appending/removing
+    - the cache for each package can be stored inside that package's lib/ directory, eg. as lib/.ld.so.cache
+  - but then also why not glibc's exec{l,v}p()?
+  - and bash already has a cache/hash
+  - what about tcsh?
+  - tcl
+  - php
+  - etc etc
+  - this really ought to be a library
+    - ala knuth's kpathsea, only better
+
+
+- if we return from sourcing the actual modulefile, and the description proc hasn't been
+  called, then it has probably been forgotten, and so flag an error and break
+  - except we can't do this
+  - but we could intercept everything except for proc description, and make it barf if called before description
+  - or, better than intercepting, just make bin-dir and everything else check that they are being called (directly or indirectly) from proc description, and fail otherwise.  this can be done using [info frame ...].  and it can be done easily from a convenience proc, ie. inside bin-dir et al, run the command "must-run-inside-description", which looks like { proc must-run-inside-description { } { # check [info frame ...] } }
+  - then simple (static) interception can be used for the stock modules commands like prepend-path, etc. ie. do { must-run-inside-description prepend-path } which will create an interception prepend-path that will first call must-run-inside-description (with no args), and then call the actual proc using uplevel (and rename shenanigans, etc).
+
+
+- inactive modules
+  - needs modulecmd shwrapper
+
+
+- "syz swap foo/bar" assumes you meant "syz swap foo foo/bar"
+  - can implement in syzcmd wrapper
+
+- rebuild modules with the configure option to not need the leading #%Module tag
+  - except that flag only applies to .version
+  - so some hacking of the modules source looks necessary...
+
+
+

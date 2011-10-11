@@ -1,0 +1,200 @@
+
+function default_stable_version {
+	default_stable_version="3.2.6"
+	# or get it from the website
+}
+
+function default_unstable_version {
+	default_unstable_version="3.2.8"
+	# or get it from the website
+}
+
+function build_deps {
+	_build_deps
+	build_deps+=(cc ld)
+	# tcl and tclx need to be around at build time, so we can find where they are and give them to the (albeit stupid) configure script (which shouldn't need to know where they are)
+	build_deps+=(tcl tclx)
+	# awk is used in support of the above shenanigans finding tcl/tclx
+	build_deps+=(awk)
+}
+
+function runtime_deps {
+	_runtime_deps
+	# FIXME: Shouldn't this policy (of no runtime deps when in *-hostdep repo)
+	# be enforced inside bf...?  ie. it applies to everything, doesn't it?
+	# Actually it should be that when inside *-hostdep, any runtime dep that fails
+	# to load/build, should be removed from the runtime_deps list (and so not end
+	# up inside the syzfile).
+	#case "$repo" in
+	#	*-hostdep)
+	#		# We're using the host's tcl and libc
+	#		;;
+	#	*)
+			runtime_deps+=(tcl tclx libc)
+	#		;;
+	#esac
+}
+
+#function supported_version {
+#	# or more sophisticated tests
+#	# $2, $3, ... could be $1 broken down by $(version_separator)
+#	# better might be that if this function wants to break down the version somehow,
+#	# it can call a helper function. eg. a helper function for normal 3.2.6 versions,
+#	# one for date-based versions like 20101122, etc.
+#	case "$1" in
+#		3.2.*) supported_version=y; return 0 ;;
+#		3.3*|3.3.*) supported_version=y; return 0 ;;
+#		*) supported_version=n; return 1 ;;
+#	esac
+#}
+
+
+#function default_arch {
+#	default_arch="x86_64"
+#}
+
+#function supported_arch {
+#	case "$1" in
+#		x86_64) supported_arch=y; return 0 ;;
+#		i686) supported_arch=y; return 0 ;;
+#		arm*) supported_arch=y; return 0 ;;
+#		*) supported_arch=n; return 1 ;;
+#	esac
+#	# or a blacklist
+#	#case "$1" in
+#	#	arm*) supported_arch=n; return 1 ;;
+#	#	*) supported_arch=y; return 0 ;;
+#	#esac
+#}
+
+
+function source_location {
+	case "$version" in
+		#3.2.8) echo "http://sourceforge.net/projects/modules/files/Modules/modules-$version/modules-${version}a.tar.bz2/download" ;;
+		#*) echo "http://sourceforge.net/projects/modules/files/Modules/modules-$version/modules-$version.tar.bz2/download" ;;
+		3.2.8) sourceforge_location "modules" "Modules/modules-$version" "modules-${version}a.tar.bz2" ; source_location="$sourceforge_location" ;;
+		*) sourceforge_location "modules" "Modules/modules-$version" "modules-$version.tar.bz2" ; source_location="$sourceforge_location" ;;
+	esac
+}
+
+
+function source_checksum {
+	# could be fetched from the website, or hardcoded in here
+	case "$version" in
+		3.2.8) source_checksum="w893502w....." ;;
+		#3.2.6) source_checksum="59bc6401efbc677d6190b00a440cccdf" ;;
+		3.2.6) source_checksum="04094f13c442b3000ec5ab7a0db7d1db0b7e222d8c699ff177c183b58d4b5e499f4d030de7d8e7efbe861d88cdcc765b04f7564b230b1e446902057482007bab" ;;
+	esac
+}
+
+
+# system-provided guess will be right
+#function archive_name {
+#	case "$version" in
+#		3.2.8) archive_name="modules-${version}a.tar.bz2"
+#		*) archive_name="modules-$version.tar.bz2"
+#	esac
+#}
+
+
+# system-provided guess will be right
+#function source_dir {
+#	source_dir="modules-$version"
+#}
+
+
+function configure_args {
+	_configure_args
+	configure_args+=( --with-module-path=/sw/syzix/noarch/.sf --disable-versioning --enable-cache )
+	# Do not use --with-autoload-path - it causes $TCLLIBPATH to be ignored.
+	# Which is a shame.  But never mind, there are ways around it.
+	#configure_args+=( --with-autoload-path )
+	configure_args+=( --with-tclx-ver=8.4 --with-tclx-inc=/usr/include )
+
+	## FIXME: these --with-tcl flags are only valid if we're in a *-hostdep repo
+	#case "$arch" in
+	#	x86_64) configure_args+=( --with-tcl=/usr/lib64 --with-tclx-lib=/usr/lib64/tclx8.4 ) ;;
+	#	i686) configure_args+=( --with-tcl=/usr/lib --with-tclx-lib=/usr/lib/tclx8.4 ) ;;
+	#	x86_64-linux) configure_args+=( --with-tcl=/usr/lib64 --with-tclx-lib=/usr/lib64/tclx8.4 ) ;;
+	#	i686-linux) configure_args+=( --with-tcl=/usr/lib --with-tclx-lib=/usr/lib/tclx8.4 ) ;;
+	#	x86_64-*) configure_args+=( --with-tcl=/usr/lib64 --with-tclx-lib=/usr/lib64/tclx8.4 ) ;;
+	#	i686-*) configure_args+=( --with-tcl=/usr/lib --with-tclx-lib=/usr/lib/tclx8.4 ) ;;
+	#esac
+
+	# FIXME: the build system should not need to know where tcl or tclx lives
+	configure_args+=( --with-tcl="$(ldd "$(type -p tclsh)" | awk '$1 ~ "^libtcl" { print gensub("/"$1, "", "", $3); }')" )
+
+	configure_args+=( --with-tclx-ver="$(tclsh <(echo 'puts [package require Tclx]'))" )
+	configure_args+=( --with-tclx-lib="$(tclsh <(echo 'package require Tclx ; puts [file dirname [lindex [lindex [info loaded] 0] 0]]'))" )
+	configure_args+=( --with-tclx-inc="$(${CC:-cc} -E - <<< '#include <tclExtend.h>' | awk '$0 ~ "# 1 \".*/tclExtend.h\"" { print gensub("\"(.*)/tclExtend.h\"", "\\1", "", $3); exit; }')" )
+}
+
+function build {
+	# patch configure.ac
+	patch <<'EOF' || fail
+--- configure.ac.orig   2007-02-23 10:12:59.000000000 +1100
++++ configure.ac        2011-02-24 15:51:40.000000000 +1100
+@@ -118,10 +118,10 @@
+     prefix=$BASEPREFIX/Modules/$VERSION
+     export prefix
+   else
+-    DEFAULTPATH=$prefix/Modules
+-    NODEFAULTPATH=$prefix/Modules
++    DEFAULTPATH=$prefix
++    NODEFAULTPATH=$prefix
+     BASEPREFIX=$prefix
+-    prefix=$BASEPREFIX/Modules
++    prefix=$BASEPREFIX
+     export prefix
+   fi
+   PREFIX=$prefix
+@@ -171,7 +171,7 @@
+ dnl Some standard autoconfig stuff
+ dnl Checks for programs
+ dnl ---------------------------------------------------------------------------
+-AC_PROG_CC
++dnl AC_PROG_CC
+ AC_PROG_CPP
+ AC_PROG_GCC_TRADITIONAL
+ AC_PROG_INSTALL
+EOF
+
+	# autoreconf
+	autoreconf || fail
+
+	#false || fail
+	standard_autoconf_build
+
+	#ln -s modulecmd "$basedir"/bin/syzcmd
+	rm -f "$basedir"/bin/{add.modules,mkroot}
+	rm -f "$basedir"/modulefiles/{modules,module-cvs,null,use.own}
+	cat <<-'EOF' > "$basedir"/modulefiles/home-repo
+	#%Module
+	description {
+		# FIXME
+		#syzix-dir $HOME
+		prepend-path BF_PATH $HOME/sw/src
+		prepend-path MODULEPATH $HOME/sw/noarch/.sf
+		prepend-path MODULEPATH $HOME/sw/[uname machine]-[string tolower [uname sysname]]/.sf
+	}
+	EOF
+}
+
+function syzfile_description {
+	cat <<-'EOF'
+	bin-dir bin
+	man-dir share/man
+
+	prepend-path MODULEPATH $basedir/modulefiles
+
+	# Is this necessary?  Or wise?
+	#remove-path PATH "/sw/syzix/[uname machine]-[string tolower [uname sysname]]/modules/default/bin"
+
+	# This is necessary until modules can respect that the prereq of this in essentials should stop unloading of this.
+	cannot-unload
+	EOF
+}
+
+
+##submodule python/2.6
+
