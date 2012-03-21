@@ -29,7 +29,7 @@ function supported_arch {
 
 function source_location {
 	# Take 0
-	source_location="http://pkgs.syzix.org/pkgs/$repo/$pkgname/$version/$pkgname-$version.tar.xz"
+	source_location="http://pkgs.syzix.org/pkgs/syzix/$pkgname/$version/$pkgname-$version.tar.xz"
 
 	# Take 1
 	#syzix_location "syz" "$version"
@@ -48,7 +48,7 @@ function source_location {
 function source_checksum {
 	# could be fetched from the website, or hardcoded in here
 	case "$version" in
-		0.1) source_checksum="..." ;;
+		0.1) source_checksum="55c72193643157c6f350a89f1535a13ea55c3365" ;;
 	esac
 
 	# Take 2: what _source_checksum should be (auto fetch from next to the source archive)
