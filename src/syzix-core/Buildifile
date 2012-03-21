@@ -1,0 +1,33 @@
+
+function default_stable_version {
+	default_stable_version="0.1"
+	# or get it from the website
+}
+
+function default_unstable_version {
+	default_unstable_version="0.1"
+	# or get it from the website
+}
+
+function runtime_deps {
+	_runtime_deps
+	runtime_deps+=(syzix syz buildiful modext modules)
+}
+
+
+function default_arch {
+	default_arch="noarch"
+}
+
+function supported_arch {
+	case "$1" in
+		noarch) supported_arch=y; return 0 ;;
+		*) supported_arch=n; return 1 ;;
+	esac
+}
+
+function build {
+	null_build
+}
+
+
