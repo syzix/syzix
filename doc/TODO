@@ -218,6 +218,10 @@ DONE   - bf will need checking to make sure it complies with this idea throughou
     which the user is then free to "syz load" as usual.
 
 
+- The syzix package has all the src/ bf files, but no build deps (or runtime deps?).
+  The syzix-core package is just a meta-package: has no bf files, but build deps on syzix, syz, modext, etc.
+  The syzix-full package is just a meta-package: has no bf files, but build deps on *everything* in /sw/syzix/src/*.
+
 
 - on a completely unrelated note to anything:
   - showing colours in diff on a sub-line basis
