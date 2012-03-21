@@ -50,7 +50,7 @@ function source_checksum {
 	#source_location
 	#source_checksum="$source_location.sha1"
 
-	# Dirty-ish hack for now, to avoid chicken-and-egg problems with the syzix-0.1.tar.xz checksum.
+	# For now, a bit of a dirty-ish hack.
 	source_location
 	source_checksum="$(wget -O - -q $source_location.sha1)"
 }
