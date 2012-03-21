@@ -1,0 +1,85 @@
+
+Bootstrapping Syzix
+====================
+
+Or, building Syzix From Scratch.
+
+This is mainly useful if you want to install to somewhere other than /sw.
+For most people, getting the basic /sw bootstrap archive and unpacking it
+inside /sw should suffice.  These instructions describe installing to /sw,
+but will work with any target, eg. $HOME.
+
+
+1. Download the bf utility and syzlib.  Dump them somewhere temporary that's
+   in your $PATH.  I use ~/bin because it's already in my $PATH.  You might
+   prefer /usr/local/bin (if you don't mind working as root).
+
+
+2. Download the bootstrap src pack, and unpack it inside your $TARGET (/sw in
+   this case).
+
+       TARGET="/sw"
+       mkdir "$TARGET"
+       cd "$TARGET"
+       tar xf ~/syzix-bootstrap-src-0.1.tar.xz
+
+
+3. Build the necessary base tools.
+
+       BFPATH="$TARGET/syzix/src" bf build syz
+       # Eventually this will be enough...
+       #BFPATH="$TARGET/syzix/src" bf build syzix-core
+
+
+4. Remove the temporary $TARGET/syzix/src and replace it with a symlink to the
+   full syzix src collection.
+
+       cd "$TARGET/syzix"
+       rm -rf src
+       ln -s noarch/syzix/default/src
+
+
+5. Remove the temporary bf and syzlib.
+
+       rm ~/bin/bf ~/bin/syzlib
+
+
+6. (Optional) Create a convenience symlink for syzzyup.
+
+       ln -s $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup /syzzyup
+
+
+7. Bootstrap syz into your current shell.
+
+       . /syzzyup
+   or
+       . $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup
+
+
+8. (Optional) Setup your profile so that all shells have the syz command available.
+
+       echo ". /syzzyup" >> /etc/profile
+   or
+       echo ". $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup" >> /etc/profile
+
+
+9. Start using the just-installed tools.
+
+       syz load syzix-core
+
+
+10. Now build the rest of the OS.
+
+   If you're happy to have a host-dependent Syzix install (in the
+   $TARGET/syzix/hostdep repo), then just start "bf build"ing the packages you're
+   interested in (eg. "bf build syzix-full" will pull in everything).
+
+   If you want a standalone system, then you'll first need to build a native
+   Syzix toolchain, which is binutils, ld, glibc and gcc (and anything else?).
+   This proceeds in much the same way as LFS, except it's simpler and more
+   straightforward - at a conceptual level, the procedure is to build hostdep
+   versions of each of these tools, and then using those (properly configured)
+   versions from the hostdep repo (instead of the actual system-wide ones in /usr),
+   rebuild them again into the actual $TARGET/syzix repo.
+
+
