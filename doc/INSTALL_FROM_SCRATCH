@@ -10,15 +10,18 @@ inside /sw should suffice.  These instructions describe installing to /sw,
 but will work with any target, eg. $HOME.
 
 
-1. Download the bf utility and syzlib.  Dump them somewhere temporary that's
-   in your $PATH.  I use ~/bin because it's already in my $PATH.  You might
-   prefer /usr/local/bin (if you don't mind working as root).
+1. Download the bf utility, syzlib and bootstrap syz utility.  Dump them
+   somewhere temporary that's in your $PATH.  I use ~/bin because it's already in
+   my $PATH.  You might prefer /usr/local/bin (if you don't mind working as root).
+   Make bf and syz be executable.
+
+       chmod +x ~/bin/bf ~/bin/syz
 
 
 2. Download the bootstrap src pack, and unpack it inside your $TARGET (/sw in
    this case).
 
-       TARGET="/sw"
+       export TARGET="/sw"
        mkdir "$TARGET"
        cd "$TARGET"
        tar xf ~/syzix-bootstrap-src-0.1.tar.xz
@@ -26,9 +29,7 @@ but will work with any target, eg. $HOME.
 
 3. Build the necessary base tools.
 
-       BFPATH="$TARGET/syzix/src" bf build syz
-       # Eventually this will be enough...
-       #BFPATH="$TARGET/syzix/src" bf build syzix-core
+       BFPATH="$TARGET/syzix/src" bf build syzix-core
 
 
 4. Remove the temporary $TARGET/syzix/src and replace it with a symlink to the
@@ -36,22 +37,26 @@ but will work with any target, eg. $HOME.
 
        cd "$TARGET/syzix"
        rm -rf src
-       ln -s noarch/syzix/default/src
+       ln -s noarch/syzix/default/sources src
 
 
 5. Remove the temporary bf and syzlib.
 
-       rm ~/bin/bf ~/bin/syzlib
+       rm ~/bin/bf ~/bin/syzlib ~/bin/syz
 
 
 6. (Optional) Create a convenience symlink for syzzyup.
 
        ln -s $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup /syzzyup
+   or
+       ln -s $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup $HOME/.syzzyup
 
 
 7. Bootstrap syz into your current shell.
 
        . /syzzyup
+   or
+       . $HOME/.syzzyup
    or
        . $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup
 
@@ -59,6 +64,8 @@ but will work with any target, eg. $HOME.
 8. (Optional) Setup your profile so that all shells have the syz command available.
 
        echo ". /syzzyup" >> /etc/profile
+   or
+       echo '. $HOME/.syzzyup' >> $HOME/.profile
    or
        echo ". $TARGET/syzix/hostdep/noarch/syz/default/bin/syzzyup" >> /etc/profile
 

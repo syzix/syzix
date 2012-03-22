@@ -9,6 +9,11 @@ function default_unstable_version {
 	# or get it from the website
 }
 
+function runtime_deps {
+	_runtime_deps
+	runtime_deps+=(syz bash)
+}
+
 
 function default_arch {
 	default_arch="noarch"
@@ -52,12 +57,18 @@ function source_checksum {
 
 	# For now, a bit of a dirty-ish hack.
 	source_location
-	source_checksum="$(wget -O - -q $source_location.sha1)"
+	source_checksum="$(wget -O - -q $source_location.sha1 | awk '{print $1}')"
 }
 
 
 function build {
 	asis_build
+}
+
+function syzfile_description {
+	cat <<-'EOF'
+	bin-dir bin
+	EOF
 }
 
 

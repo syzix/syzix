@@ -9,9 +9,17 @@ function default_unstable_version {
 	# or get it from the website
 }
 
+function supported_version {
+	case "$version" in
+		0.1) supported_version=y; return 0 ;;
+		*) supported_version=n; return 1 ;;
+	esac
+}
+
+
 function runtime_deps {
 	_runtime_deps
-	runtime_deps+=(syzix syz buildiful modext modules)
+	runtime_deps+=(modules modext syz buildiful syzix)
 }
 
 
