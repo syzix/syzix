@@ -46,7 +46,7 @@ but will work with any target, eg. $HOME.
 5. Remove the temporary bf, syzlib and syz - they're no longer needed, and
    neither is the temporary directory they used to live in.
 
-       rm "$TARGET"/syzix/bin
+       rm -rf "$TARGET"/syzix/bin
 
 
 6. (Optional) Create a convenience symlink for syzzyup.
