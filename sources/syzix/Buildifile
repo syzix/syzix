@@ -18,12 +18,12 @@
 
 
 function default_stable_version {
-	default_stable_version="0.1.2"
+	default_stable_version="0.1.3"
 	# or get it from the website
 }
 
 function default_unstable_version {
-	default_unstable_version="0.1.2"
+	default_unstable_version="0.1.3"
 	# or get it from the website
 }
 
