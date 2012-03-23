@@ -10,21 +10,24 @@ inside /sw should suffice.  These instructions describe installing to /sw,
 but will work with any target, eg. $HOME.
 
 
-1. Download the bf utility, syzlib and bootstrap syz utility.  Dump them
-   somewhere temporary that's in your $PATH.  I use ~/bin because it's already in
-   my $PATH.  You might prefer /usr/local/bin (if you don't mind working as root).
-   Make bf and syz be executable.
-
-       chmod +x ~/bin/bf ~/bin/syz
-
-
-2. Download the bootstrap src pack, and unpack it inside your $TARGET (/sw in
+1. Download the bootstrap src pack, and unpack it inside your $TARGET (/sw in
    this case).
 
        export TARGET="/sw"
        mkdir "$TARGET"
        cd "$TARGET"
-       tar xf ~/syzix-bootstrap-src-0.1.tar.xz
+       wget http://pkgs.syzix.org/pkgs/syzix/syzix-bootstrap-src/0.1/syzix-bootstrap-src-0.1.tar.xz
+       tar xf syzix-bootstrap-src-0.1.tar.xz
+       rm syzix-bootstrap-src-0.1.tar.xz
+       mv syzix-bootstrap-src-0.1/* .
+       rmdir syzix-bootstrap-src-0.1
+
+
+2. Make sure that the temporary bf and syz utilities are executable, and add
+   them to your $PATH (at the start).
+
+       chmod +x "$TARGET"/syzix/bin/{bf,syz}
+       export PATH="$TARGET/syzix/bin:$PATH"
 
 
 3. Build the necessary base tools.
@@ -40,9 +43,10 @@ but will work with any target, eg. $HOME.
        ln -s noarch/syzix/default/sources src
 
 
-5. Remove the temporary bf and syzlib.
+5. Remove the temporary bf, syzlib and syz - they're no longer needed, and
+   neither is the temporary directory they used to live in.
 
-       rm ~/bin/bf ~/bin/syzlib ~/bin/syz
+       rm "$TARGET"/syzix/bin
 
 
 6. (Optional) Create a convenience symlink for syzzyup.
