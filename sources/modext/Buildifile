@@ -1,11 +1,11 @@
 
 function default_stable_version {
-	default_stable_version="0.1"
+	default_stable_version="0.1.1"
 	# or get it from the website
 }
 
 function default_unstable_version {
-	default_unstable_version="0.1"
+	default_unstable_version="0.1.1"
 	# or get it from the website
 }
 
