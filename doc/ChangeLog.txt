@@ -1,4 +1,6 @@
 
+v0.1.2: First cleanly bootstrappable version.  GPLv3.
+
 v0.1.1: Some issues resolved, some persist.
 
 v0.1: First bootstrappable version, some issues.
