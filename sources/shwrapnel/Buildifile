@@ -1,0 +1,92 @@
+
+# Copyright (C) 2012 Kevin Pulo.
+#
+# This file is part of Syzix.
+# 
+# Syzix is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# Syzix is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with Syzix.  If not, see <http://www.gnu.org/licenses/>.
+
+
+function default_stable_version {
+	default_stable_version="0.1"
+	# or get it from the website
+}
+
+function default_unstable_version {
+	default_unstable_version="0.1"
+	# or get it from the website
+}
+
+function runtime_deps {
+	_runtime_deps
+	runtime_deps+=(bash)
+}
+
+
+function default_arch {
+	default_arch="noarch"
+}
+
+function supported_arch {
+	case "$1" in
+		noarch) supported_arch=y; return 0 ;;
+		*) supported_arch=n; return 1 ;;
+	esac
+}
+
+
+function source_location {
+	# Take 0
+	source_location="http://pkgs.syzix.org/pkgs/syzix/$pkgname/$version/$pkgname-$version.tar.xz"
+
+	# Take 1
+	#syzix_location "syz" "$version"
+	#source_location="$syzix_location"
+
+	# Take 2
+	#syzix_location "$pkgname" "$version"
+	#source_location="$syzix_location"
+
+	# Take 3: the default for all packages (ie. this is what _source_location should be)
+	#syzix_location
+	#source_location="$syzix_location"
+}
+
+
+function source_checksum {
+	# could be fetched from the website, or hardcoded in here
+	#case "$version" in
+	#	0.1) source_checksum="2502f3c6950af6bd2d79702d6d6611e155e58ad6" ;;
+	#esac
+
+	# Take 2: what _source_checksum should be (auto fetch from next to the source archive)
+	#source_location
+	#source_checksum="$source_location.sha1"
+
+	# For now, a bit of a dirty-ish hack.
+	source_location
+	source_checksum="$(wget -O - -q $source_location.sha1 | awk '{print $1}')"
+}
+
+
+function build {
+	asis_build
+}
+
+function syzfile_description {
+	cat <<-'EOF'
+	bin-dir bin
+	EOF
+}
+
+
