@@ -29,7 +29,7 @@ function default_unstable_version {
 
 function runtime_deps {
 	_runtime_deps
-	runtime_deps+=(modules)
+	runtime_deps+=(modules shwrapnel)
 }
 
 
