@@ -37,7 +37,7 @@ function supported_version {
 
 function runtime_deps {
 	_runtime_deps
-	runtime_deps+=(modules modext syz buildiful syzix)
+	runtime_deps+=(modules shwrapnel modext syz buildiful syzix)
 }
 
 
