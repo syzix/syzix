@@ -18,13 +18,21 @@
 
 
 function default_stable_version {
-	default_stable_version="0.1.1"
+#	default_stable_version="0.1.1"
 	# or get it from the website
+
+	# For now, a bit of a dirty-ish hack.
+	source_location
+	default_stable_version="$(wget -O - -q ${source_location%/*}/LATEST-STABLE)"
 }
 
 function default_unstable_version {
-	default_unstable_version="0.1.1"
+	#default_unstable_version="0.1.1"
 	# or get it from the website
+
+	# For now, a bit of a dirty-ish hack.
+	source_location
+	default_unstable_version="$(wget -O - -q ${source_location%/*}/LATEST-UNSTABLE)"
 }
 
 function runtime_deps {
