@@ -5,7 +5,8 @@ Bootstrapping Syzix
 Or, building Syzix From Scratch.
 
 This is mainly useful if you want to install to somewhere other than /sw.
-For most people, getting the basic /sw bootstrap archive and unpacking it
+For most people, getting the basic /sw binary bootstrap archive (once it
+exists, which will be when Syzix has a working toolchain) and unpacking it
 inside /sw should suffice.  These instructions describe installing to /sw,
 but will work with any target, eg. $HOME.
 
@@ -16,18 +17,18 @@ but will work with any target, eg. $HOME.
        export TARGET="/sw"
        mkdir "$TARGET"
        cd "$TARGET"
-       wget http://pkgs.syzix.org/pkgs/syzix/syzix-bootstrap-src/0.1/syzix-bootstrap-src-0.1.tar.xz
-       tar xf syzix-bootstrap-src-0.1.tar.xz
-       rm syzix-bootstrap-src-0.1.tar.xz
-       mv syzix-bootstrap-src-0.1/* .
-       rmdir syzix-bootstrap-src-0.1
+       wget http://pkgs.syzix.org/pkgs/syzix/syzix-bootstrap-src/0.2/syzix-bootstrap-src-0.2.tar.xz
+       tar xf syzix-bootstrap-src-0.2.tar.xz
+       rm syzix-bootstrap-src-0.2.tar.xz
+       mv syzix-bootstrap-src-0.2/* .
+       rmdir syzix-bootstrap-src-0.2
 
 
 2. Make sure that the temporary bf and syz utilities are executable, and add
    them to your $PATH (at the start).
 
-       chmod +x "$TARGET"/syzix/bin/{bf,syz}
-       export PATH="$TARGET/syzix/bin:$PATH"
+       chmod +x "$TARGET"/syzix/tmpbin/{bf,syz}
+       export PATH="$TARGET/syzix/tmpbin:$PATH"
 
 
 3. Build the necessary base tools.
@@ -46,7 +47,7 @@ but will work with any target, eg. $HOME.
 5. Remove the temporary bf, syzlib and syz - they're no longer needed, and
    neither is the temporary directory they used to live in.
 
-       rm -rf "$TARGET"/syzix/bin
+       rm -rf "$TARGET"/syzix/tmpbin
 
 
 6. (Optional) Create a convenience symlink for syzzyup.

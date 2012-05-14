@@ -18,18 +18,18 @@
 
 
 function default_stable_version {
-	default_stable_version="0.1"
+	default_stable_version="0.2"
 	# or get it from the website
 }
 
 function default_unstable_version {
-	default_unstable_version="0.1"
+	default_unstable_version="0.2"
 	# or get it from the website
 }
 
 function supported_version {
 	case "$version" in
-		0.1) supported_version=y; return 0 ;;
+		0.[0-9]|0.[0-9].[0-9]) supported_version=y; return 0 ;;
 		*) supported_version=n; return 1 ;;
 	esac
 }
